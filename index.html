@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chat Familiar Ably</title>
+  <script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url('https://i.ibb.co/5xV1GxC/family-bg.jpg') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+    }
+    #chat {
+      height: 200px;
+      overflow-y: auto;
+      background: #f1f1f1;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    .message {
+      background: #e0f7fa;
+      padding: 8px;
+      margin-bottom: 6px;
+      border-radius: 5px;
+      text-align: left;
+    }
+    input, button, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #00b4d8;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background-color: #0077b6;
+    }
+    video {
+      width: 100%;
+      border-radius: 10px;
+      margin-top: 10px;
+      display: none;
+    }
+    .assistant {
+      background: #ffd6d6;
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 15px;
+      font-weight: bold;
+      color: #333;
+      animation: fadeIn 2s ease-in-out;
+    }
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Chat Familia Unida con Ably</h2>
+    <input type="text" id="username" placeholder="Tu nombre">
+    <select id="mood">
+      <option value="">¿Cómo te sientes?</option>
+      <option value="😀">Feliz</option>
+      <option value="😢">Triste</option>
+      <option value="😠">Molesto</option>
+      <option value="😎">Genial</option>
+      <option value="🤗">Agradecido</option>
+    </select>
+    <div id="chat"></div>
+    <input type="text" id="message" placeholder="Escribe un mensaje...">
+    <button onclick="send()">Enviar mensaje</button>
+    <button onclick="toggleCamera()">Mostrar cámara</button>
+    <video id="camera" autoplay></video>
+    <div id="usersOnline" class="assistant">Usuarios en línea: 0</div>
+    <div class="assistant">🤖 Asistente: ¡Bienvenido! Usa los botones para enviar mensajes, compartir tu estado de ánimo y activar tu cámara.</div>
+  </div>
+
+  <script>
+    const ably = new Ably.Realtime("eTZWJA.GCYSUg:0yq469zg6HLCtp7YcdEObcqkqLytOcbxIub4Msba8yg");
+    const channel = ably.channels.get("familia-chat");
+
+    const usernameInput = document.getElementById("username");
+    const messageInput = document.getElementById("message");
+    const moodInput = document.getElementById("mood");
+    const chatDiv = document.getElementById("chat");
+    const usersOnlineDiv = document.getElementById("usersOnline");
+    const camera = document.getElementById("camera");
+
+    let presenceCount = 0;
+
+    ably.connection.on("connected", () => {
+      channel.presence.enter("online");
+    });
+
+    channel.presence.subscribe("enter", updatePresence);
+    channel.presence.subscribe("leave", updatePresence);
+
+    function updatePresence() {
+      channel.presence.get((err, members) => {
+        if (!err) {
+          presenceCount = members.length;
+          usersOnlineDiv.textContent = `Usuarios en línea: ${presenceCount}`;
+        }
+      });
+    }
+
+    channel.subscribe("mensaje", message => {
+      const div = document.createElement("div");
+      div.className = "message";
+      div.textContent = message.data;
+      chatDiv.appendChild(div);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    });
+
+    function send() {
+      const user = usernameInput.value.trim();
+      const text = messageInput.value.trim();
+      const mood = moodInput.value;
+      if (user && text) {
+        const fullMsg = `${user} ${mood || ""}: ${text}`;
+        channel.publish("mensaje", fullMsg);
+        messageInput.value = "";
+      }
+    }
+
+    function toggleCamera() {
+      if (camera.style.display === "none" || camera.style.display === "") {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(stream => {
+            camera.srcObject = stream;
+            camera.style.display = "block";
+          })
+          .catch(err => alert("No se pudo acceder a la cámara"));
+      } else {
+        const tracks = camera.srcObject?.getTracks();
+        if (tracks) tracks.forEach(track => track.stop());
+        camera.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>
