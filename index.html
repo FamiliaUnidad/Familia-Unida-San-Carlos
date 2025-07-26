@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -142,5 +141,103 @@
       <img src="https://i.ibb.co/1MfbjvB/assistant-character.png" alt="Asistente" class="assistant" />
     </div>
   </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyArIJr21NA6QSQIS3rK5lTJ81JZk0mLbtU",
+      authDomain: "familia-unida-b4f75.firebaseapp.com",
+      projectId: "familia-unida-b4f75",
+      storageBucket: "familia-unida-b4f75.appspot.com",
+      messagingSenderId: "809407365353",
+      appId: "1:809407365353:web:dab057eb308bb1fc8e3078"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const loginScreen = document.getElementById("loginScreen");
+    const chatScreen = document.getElementById("chatScreen");
+    const nameInput = document.getElementById("nameInput");
+    const usernameSpan = document.getElementById("username");
+    const userCount = document.getElementById("userCount");
+    const messageInput = document.getElementById("messageInput");
+    const messagesDiv = document.getElementById("messages");
+    const moodSelector = document.getElementById("moodSelector");
+    const mood = document.getElementById("mood");
+    const video = document.getElementById("video");
+
+    let userName = "";
+    let userKey = "";
+
+    function startChat() {
+      const name = nameInput.value.trim();
+      if (!name) return alert("Escribe tu nombre.");
+      userName = name;
+      usernameSpan.textContent = userName;
+      loginScreen.classList.add("hidden");
+      chatScreen.classList.remove("hidden");
+
+      const userRef = db.ref("users").push({ name: userName });
+      userKey = userRef.key;
+
+      db.ref("users").on("value", snapshot => {
+        const count = snapshot.numChildren();
+        userCount.textContent = "Usuarios conectados: " + count;
+      });
+
+      db.ref("messages").on("child_added", snap => {
+        const msg = snap.val();
+        const div = document.createElement("div");
+        div.className = "message";
+        div.textContent = `${msg.name}${msg.mood ? ' (' + msg.mood + ')' : ''}: ${msg.text}`;
+        messagesDiv.appendChild(div);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+
+    function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text) return;
+      const selectedMood = mood.value;
+      db.ref("messages").push({ name: userName, text, mood: selectedMood });
+      messageInput.value = "";
+    }
+
+    function toggleMood() {
+      moodSelector.classList.toggle("hidden");
+    }
+
+    function toggleCamera() {
+      if (video.style.display === "none") {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(stream => {
+            video.srcObject = stream;
+            video.style.display = "block";
+          })
+          .catch(() => alert("No se pudo acceder a la cámara."));
+      } else {
+        const stream = video.srcObject;
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+        video.srcObject = null;
+        video.style.display = "none";
+      }
+    }
+
+    function exitChat() {
+      if (userKey) {
+        db.ref("users/" + userKey).remove();
+      }
+      location.reload();
+    }
+
+    window.addEventListener("beforeunload", () => {
+      if (userKey) db.ref("users/" + userKey).remove();
+    });
+  </script>
 </body>
 </html>
