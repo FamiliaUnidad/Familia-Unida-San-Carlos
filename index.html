@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login por Teléfono - Familia Unida</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Inicia sesión con tu número de teléfono</h1>
+
+  <div id="loginDiv">
+    <input type="text" id="phoneNumber" placeholder="+51 987654321" />
+    <div id="recaptcha-container"></div>
+    <button onclick="sendCode()">Enviar código</button>
+  </div>
+
+  <div id="verifyDiv" class="hidden">
+    <input type="text" id="verificationCode" placeholder="Código recibido" />
+    <button onclick="verifyCode()">Verificar</button>
+  </div>
+
+  <div id="welcomeDiv" class="hidden">
+    <p>¡Bienvenido, has iniciado sesión con éxito!</p>
+    <button onclick="logout()">Cerrar sesión</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyArIJr21NA6QSQIS3rK5lTJ81JZk0mLbtU",
+      authDomain: "familia-unida-b4f75.firebaseapp.com",
+      projectId: "familia-unida-b4f75",
+      storageBucket: "familia-unida-b4f75.appspot.com",
+      messagingSenderId: "809407365353",
+      appId: "1:809407365353:web:dab057eb308bb1fc8e3078"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+      size: 'normal',
+      callback: function(response) {
+        // reCAPTCHA solved
+      }
+    });
+    recaptchaVerifier.render();
+
+    let confirmationResult;
+
+    function sendCode() {
+      const phoneNumber = document.getElementById('phoneNumber').value;
+      auth.signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
+        .then((result) => {
+          confirmationResult = result;
+          document.getElementById('loginDiv').classList.add('hidden');
+          document.getElementById('verifyDiv').classList.remove('hidden');
+        })
+        .catch((error) => {
+          alert("Error: " + error.message);
+        });
+    }
+
+    function verifyCode() {
+      const code = document.getElementById('verificationCode').value;
+      confirmationResult.confirm(code)
+        .then((result) => {
+          document.getElementById('verifyDiv').classList.add('hidden');
+          document.getElementById('welcomeDiv').classList.remove('hidden');
+        })
+        .catch((error) => {
+          alert("Código incorrecto: " + error.message);
+        });
+    }
+
+    function logout() {
+      auth.signOut().then(() => location.reload());
+    }
+  </script>
+</body>
+</html>
