@@ -1,69 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Familia Unida</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-</head>
-<body class="bg-gradient-to-br from-blue-100 to-purple-200 min-h-screen text-gray-800">
-  <header class="p-4 text-center bg-white shadow">
-    <h1 class="text-3xl font-bold">🤖 Familia Unida - Asistente Virtual</h1>
-    <p>Tu espacio seguro para comunicarte y compartir en familia</p>
-  </header>
+  <meta charset="UTF-8" />
+  <title>Familia Unida - Login con Google</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-  <main class="p-6 flex flex-col items-center space-y-4">
-    <button id="loginBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Iniciar sesión con Google</button>
-    <div id="userPanel" class="hidden flex flex-col items-center space-y-3">
-      <p class="font-semibold">Bienvenido, <span id="userName"></span></p>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button onclick="showChat()" class="btn">💬 Chat Familiar</button>
-        <button onclick="showCamera()" class="btn">📸 Cámara</button>
-        <button onclick="showAssistant()" class="btn">🧠 Asistente</button>
-      </div>
-      <button onclick="logout()" class="text-red-500">Cerrar sesión</button>
-    </div>
-
-    <section id="chatSection" class="hidden w-full max-w-xl">
-      <h2 class="text-xl font-bold mb-2">Chat en Tiempo Real</h2>
-      <div id="chatBox" class="bg-white h-60 overflow-y-scroll border p-3 mb-2 rounded shadow"></div>
-      <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." class="w-full p-2 border rounded mb-2" />
-      <button onclick="sendMessage()" class="btn">Enviar</button>
-    </section>
-
-    <section id="cameraSection" class="hidden">
-      <h2 class="text-xl font-bold mb-2">Cámara Web</h2>
-      <video id="video" autoplay playsinline class="rounded border shadow"></video>
-    </section>
-
-    <section id="assistantSection" class="hidden">
-      <h2 class="text-xl font-bold mb-2">Asistente Familiar</h2>
-      <p>👋 Hola, ¿en qué puedo ayudarte hoy?</p>
-      <ul class="list-disc pl-6">
-        <li>Acceder al chat</li>
-        <li>Activar la cámara</li>
-        <li>Consultar información</li>
-      </ul>
-    </section>
-  </main>
-
-  <style>
-    .btn {
-      background-color: #4F46E5;
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      transition: background-color 0.3s;
-    }
-    .btn:hover {
-      background-color: #4338CA;
-    }
-  </style>
-
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyArIJr21NA6QSQIS3rK5lTJ81JZk0mLbtU",
       authDomain: "familia-unida-b4f75.firebaseapp.com",
@@ -73,81 +16,57 @@
       appId: "1:809407365353:web:dab057eb308bb1fc8e3078",
       measurementId: "G-1X8WDZJ60B"
     };
-    firebase.initializeApp(firebaseConfig);
 
-    const auth = firebase.auth();
-    const db = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
-    const loginBtn = document.getElementById("loginBtn");
-    const userPanel = document.getElementById("userPanel");
-    const userNameSpan = document.getElementById("userName");
-    const chatBox = document.getElementById("chatBox");
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          document.getElementById("saludo").innerText = "Hola, " + result.user.displayName;
+          document.getElementById("loginBtn").style.display = "none";
+          document.getElementById("logoutBtn").style.display = "inline-block";
+        }
+      })
+      .catch((error) => {
+        alert("Error en redirección: " + error.message);
+        console.error(error);
+      });
 
-    loginBtn.addEventListener("click", () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider);
-    });
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        loginBtn.classList.add("hidden");
-        userPanel.classList.remove("hidden");
-        userNameSpan.textContent = user.displayName;
-        listenForMessages();
-      }
-    });
-
-    function logout() {
-      auth.signOut();
-      location.reload();
+    window.login = () => {
+      signInWithRedirect(auth, provider).catch(error => {
+        alert("Error al iniciar sesión: " + error.message);
+        console.error(error);
+      });
     }
 
-    function showChat() {
-      hideAll();
-      document.getElementById("chatSection").classList.remove("hidden");
-    }
-
-    function showCamera() {
-      hideAll();
-      document.getElementById("cameraSection").classList.remove("hidden");
-      const video = document.getElementById("video");
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => video.srcObject = stream);
-    }
-
-    function showAssistant() {
-      hideAll();
-      document.getElementById("assistantSection").classList.remove("hidden");
-    }
-
-    function hideAll() {
-      document.getElementById("chatSection").classList.add("hidden");
-      document.getElementById("cameraSection").classList.add("hidden");
-      document.getElementById("assistantSection").classList.add("hidden");
-    }
-
-    function sendMessage() {
-      const msg = document.getElementById("messageInput").value;
-      if (msg.trim() !== "") {
-        const user = auth.currentUser;
-        db.ref("messages").push({
-          name: user.displayName,
-          text: msg,
-          time: Date.now()
-        });
-        document.getElementById("messageInput").value = "";
-      }
-    }
-
-    function listenForMessages() {
-      db.ref("messages").on("child_added", snap => {
-        const msg = snap.val();
-        const msgElem = document.createElement("div");
-        msgElem.textContent = `${msg.name}: ${msg.text}`;
-        chatBox.appendChild(msgElem);
-        chatBox.scrollTop = chatBox.scrollHeight;
+    window.logout = () => {
+      signOut(auth).then(() => {
+        location.reload();
       });
     }
   </script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin-top: 60px;
+      background: #f1f1f1;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 15px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bienvenido a Familia Unida</h1>
+  <p id="saludo">Por favor inicia sesión con Google</p>
+  <button id="loginBtn" onclick="login()">Iniciar sesión con Google</button>
+  <button id="logoutBtn" onclick="logout()" style="display:none;">Cerrar sesión</button>
 </body>
 </html>
